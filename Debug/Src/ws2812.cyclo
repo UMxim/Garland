@@ -1,0 +1,4 @@
+../Src/ws2812.c:9:6:ws2813_FillConvertBuffer	2
+../Src/ws2812.c:26:6:ws2813_AddRGB	1
+../Src/ws2812.c:44:6:ws2813_ChangeCurrentBuff	1
+../Src/ws2812.c:50:11:ws2813_GetDMAbuff	1

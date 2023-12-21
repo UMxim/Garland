@@ -1,0 +1,2 @@
+../Src/random.c:14:9:Random_AddBit	8	static
+../Src/random.c:50:10:Random_GetRnd	0	static
