@@ -9,5 +9,6 @@ uint8_t Random_AddBit(uint32_t ext_bit);
 
 uint32_t Random_GetRnd(void);
 
+uint8_t Random_GetV(uint16_t rnd_linear);
 
 #endif // __RANDOM_H

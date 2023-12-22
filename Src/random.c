@@ -54,3 +54,35 @@ uint32_t Random_GetRnd()
 	currentWord--;
 	return rndBuff[currentWord - 1];
 }
+
+// вычисляем корень из x
+static uint8_t GetSQRT(uint16_t x)
+{
+    uint8_t ans = 0;
+    uint8_t tmp;
+    for (int i=7; i>=0; i--)    
+    {
+        tmp = ans | (1<<i);
+        if ((tmp * tmp) <= x)
+            ans = tmp;
+    }
+    return ans;
+}
+}
+
+// Возвращаем случайное число с распределением V (чаще всего 0 и 0xFF. 0x7F почти никогда)
+uint8_t Random_GetV(uint16_t rnd_linear)
+{
+	uint8_t calc;
+    calc = GetSQRT(rnd_linear) >> 1; // 0 - 0x7F
+    if (rnd_linear & 1)
+    {
+        calc = 0x7F + calc;
+    }
+    else
+    {
+        calc = 0x7F - calc;
+    }
+    
+    return calc;
+}

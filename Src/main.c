@@ -90,6 +90,25 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 	dmaFlag = 1 ;
 }
 
+// type  0 - linear; 1 - V образный 
+uint8_t GetRandom(uint8_t type)
+{
+	uint32_t rnd;		
+	
+	rnd = Random_GetRnd();
+	HAL_ADC_Start_IT(&hadc1);
+	while (!rnd) 
+	{
+		rnd = Random_GetRnd();
+	};				
+	
+	if (type == 0)
+		return rnd;
+	
+	// V
+	return Random_GetV(rnd);	
+}
+
 void Prog_0()
 {
 	
@@ -129,15 +148,16 @@ int main(void)
   MX_TIM4_Init();
   MX_ADC1_Init();
   MX_CRC_Init();
-  /* USER CODE BEGIN 2 */	HAL_TIM_Base_Start_IT(&htim4);
-	HAL_TIM_Base_Start_IT(&htim4);
-	HAL_ADC_Start_IT(&hadc1);
-	ws2813_FillConvertBuffer();
-	HAL_TIM_Base_Start_IT(&htim4);
-	for (int i=0; i<2*LED_NUM; i++) 
-		ws2813_AddRGB(i, i);
-	uint8_t *cdmaBuff = ws2813_GetDMAbuff();
-	HAL_SPI_Transmit_DMA(&hspi1, cdmaBuff, DMA_BUFF_SIZE);
+  /* USER CODE BEGIN 2 */	
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_ADC_Start_IT(&hadc1);
+  ws2813_FillConvertBuffer();
+  HAL_TIM_Base_Start_IT(&htim4);
+  for (int i=0; i<2*LED_NUM; i++) 
+  	ws2813_AddRGB(i, i);
+  uint8_t *cdmaBuff = ws2813_GetDMAbuff();
+  HAL_SPI_Transmit_DMA(&hspi1, cdmaBuff, DMA_BUFF_SIZE);
 	
   /* USER CODE END 2 */
 
