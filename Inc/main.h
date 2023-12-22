@@ -46,6 +46,9 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+#define TIME_MIN_SEC			2
+#define TIME_MAX_SEC			40
+#define MAX_VAL_DIV				2	//	Делитель максимального значения. 
 
 /* USER CODE END EM */
 

@@ -32,6 +32,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define TIMER_PERIOD_MS			20	// Период вызова функции обновления состояния
+#define TIME_MIN_TICK			(TIME_MIN_SEC * 1000 / TIMER_PERIOD_MS)
+#define TIME_MAX_TICK			(TIME_MAX_SEC * 1000 / TIMER_PERIOD_MS)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +55,7 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 volatile uint8_t timFlag = 0;
 volatile uint8_t dmaFlag = 1;
+uint32_t rgbArr[LED_NUM]; // кольцевой массив
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,7 +95,8 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 }
 
 // type  0 - linear; 1 - V образный 
-uint8_t GetRandom(uint8_t type)
+// при 0 - возврат 32 бит, при 1 - только 8
+uint32_t GetRandom(uint8_t type)
 {
 	uint32_t rnd;		
 	
@@ -109,10 +114,65 @@ uint8_t GetRandom(uint8_t type)
 	return Random_GetV(rnd);	
 }
 
+// Бегущие огни
 void Prog_0()
 {
 	
+	static uint32_t timer = 0;
+	static int32_t  delta[3] = {0};	// RGB
+	static uint32_t curr[3] = {0};
+	static uint32_t dest[3] = 0;
+		
+	static uint16_t arrPos = 0; // указатель на начало массива
+	
+	// Задаем цвет нулевому диоду
+	if (!timer)
+	{
+		timer = (TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;
+		for (int i=0; i<3; i++)
+		{
+			curr[i] = dest[i];
+			dest[i] = GetRandom(1) << 24;
+			delta[i] = (dest[i] - curr[i]) / timer ;
+		}		
+	}
+	else
+	{
+		timer--;
+		for (int i=0; i<3; i++)
+		{
+			curr[i] += delta[i]; 
+		}
+	}
+	
+	rgbArr[arrPos] = ((curr[0]>>24)/MAX_VAL_DIV)<<16; // R
+	rgbArr[arrPos] |= ((curr[1]>>24)/MAX_VAL_DIV)<<8; // G
+	rgbArr[arrPos] |= (curr[2]>>24)/MAX_VAL_DIV; 	  // B
+	
+	// Передаем в массив
+	int pos = LED_NUM - 1;
+	for (int i=arrPos; i<LED_NUM; i++)
+		ws2813_AddRGB(rgbArr[i], pos--);
+	for(int i=0; i<arrPos; i++)
+		ws2813_AddRGB(rgb[i], pos--);
+	
+	arrPos++;
+	if (arrPos == LED_NUM) 
+		arrPos = 0;
 }
+
+// Случайная вспышка
+void Prog_1()
+{	
+	uint32_t rnd = GetRandom(0);
+	uint8_t *rndP = (uint8_t*)&rnd;
+	uint32_t rgb = (rndP[0]/MAX_VAL_DIV)<<16;
+	rgb |= (rndP[1]/MAX_VAL_DIV)<<8;
+	rgb |= (rndP[2]/MAX_VAL_DIV);
+	uint16_t pos = GetRandom(0) % LED_NUM;
+	ws2813_AddRGB(rgb, pos);
+}
+	
 /* USER CODE END 0 */
 
 /**
