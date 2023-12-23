@@ -24,6 +24,7 @@
 #include "random.h"
 #include "ws2812.h"
 #include "stdlib.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,6 +58,7 @@ TIM_HandleTypeDef htim4;
 volatile uint8_t timFlag = 0;
 volatile uint8_t dmaFlag = 1;
 uint32_t rgbArr[LED_NUM]; // кольцевой массив
+volatile uint32_t timerCounter;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,6 +90,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	timFlag = 1;
+	timerCounter++;
 }
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
@@ -231,36 +234,46 @@ void Prog_2()
 
 // Бегущие огни
 void Prog_3()
-{
-	#define NUM 16
-	static uint32_t timer = 0;	
-	static uint8_t curr[3][NUM] = {0};
-	static uint8_t currNum = 0;			
-	
+{	
+	#define MAX_NUM 8
 	static uint16_t arrPos = 0; // указатель на начало массива
-	
-	// Задаем цвет нулевому диоду
-	if (!timer)
+	static struct
 	{
-		timer = (TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;
-		for (int i=0; i<3; i++)
-		{			
-			curr[i][currNum] = GetRandom(1);			
-			currNum++;
-			currNum = currNum >= NUM ? 0 : currNum;
-		}		
+		int16_t pos;
+		uint8_t rgb[3];
+		uint8_t dir[3];
+	} pix[MAX_NUM];
+		
+	static uint16_t changeTime = 0;
+	if (changeTime == 0)
+	{		
+		changeTime = (TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;		
+		for(int i=0; i<MAX_NUM; i++)
+		{
+			pix[i].pos = LED_NUM * i / MAX_NUM;
+			for(int j=0; j<3; j++)
+			{
+				pix[i].rgb[j] = GetRandom(1);
+				pix[i].dir[j] = GetRandom(0) & 1;
+			}
+		}
 	}
 	else
 	{
-		timer--;	
+		changeTime--;
+		for(int i=0; i<MAX_NUM; i++)
+			for(int j=0; j<3; j++)
+				pix[i].rgb[j] = pix[i].dir[j] ? pix[i].rgb[j] + 1 : pix[i].rgb[j] - 1;
 	}
 	
-	for(int i=0; i<NUM; i++)
-	{
-		rgbArr[currNum] = (uint8_t)(curr[0][i]/MAX_VAL_DIV)<<16; // R
-		rgbArr[currNum] |= (uint8_t)(curr[1][i]/MAX_VAL_DIV)<<8; // G
-		rgbArr[currNum] |= (uint8_t)(curr[2][i]/MAX_VAL_DIV); 	  // B
-	}
+	memset(rgbArr, 0, LED_NUM*4);
+	for(int i=0; i<MAX_NUM; i++)
+	{		
+		uint8_t pos_ = pix[i].pos;
+		rgbArr[pos_] = pix[i].rgb[0]<<16; // R
+		rgbArr[pos_] |= pix[i].rgb[1]<<8; // G
+		rgbArr[pos_] |= pix[i].rgb[2]; 	  // B
+	}	
 		
 	// Передаем в массив
 	int pos = LED_NUM - 1;
@@ -325,7 +338,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		Prog_3(); // готовим буфер
+		switch((timerCounter>>13)&3)
+		{
+			case 0:
+				Prog_0();
+				break;
+			case 1:
+				Prog_1();
+				break;
+			case 2:
+				Prog_2();
+				break;
+			case 3:
+				Prog_3();
+				break;
+		}
+		
 		while(!dmaFlag);
 		dmaFlag = 0;
 		
