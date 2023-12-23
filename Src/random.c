@@ -68,7 +68,7 @@ static uint8_t GetSQRT(uint16_t x)
     }
     return ans;
 }
-}
+
 
 // Возвращаем случайное число с распределением V (чаще всего 0 и 0xFF. 0x7F почти никогда)
 uint8_t Random_GetV(uint16_t rnd_linear)
