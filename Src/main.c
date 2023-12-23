@@ -58,6 +58,7 @@ TIM_HandleTypeDef htim4;
 volatile uint8_t timFlag = 0;
 volatile uint8_t dmaFlag = 1;
 uint32_t rgbArr[LED_NUM]; // кольцевой массив
+const uint32_t rgbConst[8]={0x000000, 0x0000FF, 0x00FF00, 0x00FFFF, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF};
 volatile uint32_t timerCounter;
 /* USER CODE END PV */
 
@@ -127,50 +128,47 @@ uint32_t GetRandom(uint8_t type)
 // Бегущие огни
 void Prog_0()
 {
+	static uint32_t timer = 0;	
+	static uint32_t curr = 0;
+	static uint32_t dest = 0;
 	
-	static uint32_t timer = 0;
-	static double delta[3] = {0};	// RGB
-	static double curr[3] = {0};
-	static double dest[3] = {0};
-			
-	static uint16_t arrPos = 0; // указатель на начало массива
-	
+	uint8_t* currP = (uint8_t*)&curr;
+	uint8_t* destP = (uint8_t*)&dest;
 	// Задаем цвет нулевому диоду
 	if (!timer)
 	{
-		timer = (TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;
-		for (int i=0; i<3; i++)
+		timer = 0xFF;
+		curr = dest;
+		do
 		{
-			curr[i] = dest[i];
-			dest[i] = GetRandom(1);
-			delta[i] = (dest[i] - curr[i])/timer;	
-		}		
+			dest = rgbConst[GetRandom(0)&7];		
+		}while (curr == dest);
+		
 	}
 	else
 	{
 		timer--;
-		for (int i=0; i<3; i++)
-		{			
-			curr[i] += delta[i];
-			if (curr[i] < 0) curr[i] = 0;
-			if (curr[i] > 0xFF) curr[i] = 0xFF;
-		}
+		for(int i=0; i<3; i++)
+			if (destP[i]) 
+			{
+				if (currP[i] < 0xFF)
+					currP[i]++;
+			}
+			else
+			{
+				if (currP[i] > 0)
+					currP[i]--;
+			}			
 	}
 	
-	rgbArr[arrPos] = (uint8_t)(curr[0]/MAX_VAL_DIV)<<16; // R
-	rgbArr[arrPos] |= (uint8_t)(curr[1]/MAX_VAL_DIV)<<8; // G
-	rgbArr[arrPos] |= (uint8_t)(curr[2]/MAX_VAL_DIV); 	  // B
-		
 	// Передаем в массив
-	int pos = LED_NUM - 1;
-	for (int i=arrPos+1; i<LED_NUM; i++)
-		ws2813_AddRGB(rgbArr[i], pos--);
-	for(int i=0; i<arrPos; i++)
-		ws2813_AddRGB(rgbArr[i], pos--);
+	for (int i = LED_NUM-1; i>0; i--)
+		rgbArr[i] = rgbArr[i-1];
 	
-	arrPos++;
-	if (arrPos == LED_NUM) 
-		arrPos = 0;
+	rgbArr[0] = curr;
+	
+	for(int i=0; i<LED_NUM; i++)
+		ws2813_AddRGB(rgbArr[i], i);	
 }
 
 // Случайная вспышка
@@ -178,15 +176,9 @@ void Prog_1()
 {	
 	for (int i=0; i<10; i++)
 	{
-		uint32_t rnd = GetRandom(0);
-		uint8_t r = rnd >> 16;
-		uint8_t g = rnd >> 8;
-		uint8_t b = rnd ;
-		uint32_t rgb = (r/MAX_VAL_DIV)<<16;
-		rgb |= (g/MAX_VAL_DIV)<<8;
-		rgb |= (b/MAX_VAL_DIV);
+		uint32_t rnd = rgbConst[GetRandom(0)&7];
 		uint16_t pos = GetRandom(0) % LED_NUM;
-		rgbArr[pos] = rgb;
+		rgbArr[pos] = rnd;
 	}
 	for (int i=0; i<LED_NUM; i++)
 		ws2813_AddRGB(rgbArr[i], i);
@@ -198,26 +190,22 @@ void Prog_2()
 {
 	
 	static uint32_t timer = 0;	
-	static uint32_t curr[3] = {0};
+	static uint32_t curr = 0;
 	static uint16_t arrPos = 0; // указатель на начало массива
 	
 	// Задаем цвет нулевому диоду
 	if (!timer)
 	{
 		timer = 25;//(TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;
-		for (int i=0; i<3; i++)
-		{
-			curr[i] = GetRandom(1) << 24;			
-		}		
+		curr = rgbConst[GetRandom(0)&7];		
+				
 	}
 	else
 	{
 		timer--;		
 	}
 	
-	rgbArr[arrPos] = ((curr[0]>>24)/MAX_VAL_DIV)<<16; // R
-	rgbArr[arrPos] |= ((curr[1]>>24)/MAX_VAL_DIV)<<8; // G
-	rgbArr[arrPos] |= (curr[2]>>24)/MAX_VAL_DIV; 	  // B
+	rgbArr[arrPos] = curr; 
 	
 	// Передаем в массив
 	int pos = LED_NUM - 1;
@@ -235,56 +223,53 @@ void Prog_2()
 // Бегущие огни
 void Prog_3()
 {	
-	#define MAX_NUM 8
-	static uint16_t arrPos = 0; // указатель на начало массива
-	static struct
+	#define MAX_NUM 16	
+	static int16_t pos[MAX_NUM];
+	static uint32_t rgb[MAX_NUM];		
+	
+	static uint8_t isFirst = 1;
+	
+	if (isFirst)
 	{
-		int16_t pos;
-		uint8_t rgb[3];
-		uint8_t dir[3];
-	} pix[MAX_NUM];
-		
-	static uint16_t changeTime = 0;
-	if (changeTime == 0)
-	{		
-		changeTime = (TIME_MIN_TICK + GetRandom(0)) % TIME_MAX_TICK;		
-		for(int i=0; i<MAX_NUM; i++)
+		isFirst = 0;
+		for (int i=0; i<MAX_NUM; i++)
 		{
-			pix[i].pos = LED_NUM * i / MAX_NUM;
-			for(int j=0; j<3; j++)
-			{
-				pix[i].rgb[j] = GetRandom(1);
-				pix[i].dir[j] = GetRandom(0) & 1;
-			}
+			pos[i] = LED_NUM * i / MAX_NUM;
+			rgb[i] = rgbConst[GetRandom(0)&7];
 		}
 	}
-	else
-	{
-		changeTime--;
-		for(int i=0; i<MAX_NUM; i++)
-			for(int j=0; j<3; j++)
-				pix[i].rgb[j] = pix[i].dir[j] ? pix[i].rgb[j] + 1 : pix[i].rgb[j] - 1;
-	}
-	
-	memset(rgbArr, 0, LED_NUM*4);
-	for(int i=0; i<MAX_NUM; i++)
-	{		
-		uint8_t pos_ = pix[i].pos;
-		rgbArr[pos_] = pix[i].rgb[0]<<16; // R
-		rgbArr[pos_] |= pix[i].rgb[1]<<8; // G
-		rgbArr[pos_] |= pix[i].rgb[2]; 	  // B
-	}	
 		
-	// Передаем в массив
-	int pos = LED_NUM - 1;
-	for (int i=arrPos+1; i<LED_NUM; i++)
-		ws2813_AddRGB(rgbArr[i], pos--);
-	for(int i=0; i<arrPos; i++)
-		ws2813_AddRGB(rgbArr[i], pos--);
+	for (int i=0; i<MAX_NUM; i++)
+		if (++pos[i]==LED_NUM)
+		{
+			rgb[i] = rgbConst[GetRandom(0)&7];
+			pos[i] = 0;
+		}
 	
-	arrPos++;
-	if (arrPos == LED_NUM) 
-		arrPos = 0;
+	// Передаем в массив
+	memset(rgbArr, 0, LED_NUM*4);
+	for (int i=0; i<MAX_NUM; i++)
+		rgbArr[pos[i]] = rgb[i];
+	
+	for(int i=0; i<LED_NUM; i++)
+		ws2813_AddRGB(rgbArr[i], i);		
+	
+}
+
+void Prog_4()
+{	
+	#define DIVIDER (50*10) // 10сек 
+	static uint32_t tim = 0;	
+	if (!tim) 
+	{		
+		tim = DIVIDER;		
+		for( int i=0; i<LED_NUM; i++)
+			rgbArr[i] = rgbConst[GetRandom(0)&7];
+	}
+	tim--;
+	
+	for(int i=0; i<LED_NUM; i++)
+		ws2813_AddRGB(rgbArr[i], i);	
 }
 /* USER CODE END 0 */
 
@@ -336,9 +321,16 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	static uint8_t currentProg = 4;
   while (1)
   {
-		switch((timerCounter>>13)&3)
+		if (timerCounter == 50*60*3) // 3 минуты
+		{
+			timerCounter = 0;
+			currentProg++;
+		}
+		
+		switch(currentProg)
 		{
 			case 0:
 				Prog_0();
@@ -351,6 +343,12 @@ int main(void)
 				break;
 			case 3:
 				Prog_3();
+				break;
+			case 4:
+				Prog_4();
+				break;
+			default:
+				currentProg = 0;
 				break;
 		}
 		
