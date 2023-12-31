@@ -228,7 +228,7 @@ void Prog_3()
 	static uint32_t rgb[MAX_NUM];		
 	
 	static uint8_t isFirst = 1;
-	
+	static int delay = 0;
 	if (isFirst)
 	{
 		isFirst = 0;
@@ -239,18 +239,20 @@ void Prog_3()
 		}
 	}
 		
-	for (int i=0; i<MAX_NUM; i++)
-		if (++pos[i]==LED_NUM)
-		{
-			rgb[i] = rgbConst[GetRandom(0)&7];
-			pos[i] = 0;
-		}
-	
-	// Передаем в массив
-	memset(rgbArr, 0, LED_NUM*4);
-	for (int i=0; i<MAX_NUM; i++)
-		rgbArr[pos[i]] = rgb[i];
-	
+	if ((delay++ & 0x1F) == 0)
+	{
+		for (int i=0; i<MAX_NUM; i++)
+			if (++pos[i]==LED_NUM)
+			{
+				rgb[i] = rgbConst[GetRandom(0)&7];
+				pos[i] = 0;
+			}
+		
+		// Передаем в массив
+		memset(rgbArr, 0, LED_NUM*4);
+		for (int i=0; i<MAX_NUM; i++)
+			rgbArr[pos[i]] = rgb[i];
+	}
 	for(int i=0; i<LED_NUM; i++)
 		ws2813_AddRGB(rgbArr[i], i);		
 	
@@ -321,7 +323,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	static uint8_t currentProg = 4;
+	static uint8_t currentProg = 3;
   while (1)
   {
 		if (timerCounter == 50*60*3) // 3 минуты
