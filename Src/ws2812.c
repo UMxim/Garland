@@ -22,6 +22,27 @@ void ws2813_FillConvertBuffer(void)
 	}		
 }
 
+
+
+/*
+Массив конвертации при компиляции. Проверено, эквивалентно.
+// Set Bit Pos   Текущий бит преобразуем в 3 бита 0X0
+#define SBP(byte, bit) ( ((byte>>bit)&1)<<(3*bit+1) )
+// Конверт байта в u32 где каждый бит X приводится в вид 1X0.  пример 0x5 -> 0b 110 100 110
+#define CONVERT(byte) ( 0x924924 | SBP(byte, 0) | SBP(byte, 1) | SBP(byte, 2) | SBP(byte, 3) | SBP(byte, 4) | SBP(byte, 5) | SBP(byte, 6) | SBP(byte, 7) )
+// Создание последовательности 16 чисел с заданным старшим ниблом
+#define ADD_NIBBLE(hi_nibble_val) 	CONVERT(hi_nibble_val+0x0), CONVERT(hi_nibble_val+0x1), CONVERT(hi_nibble_val+0x2), CONVERT(hi_nibble_val+0x3), \
+								 	CONVERT(hi_nibble_val+0x4), CONVERT(hi_nibble_val+0x5), CONVERT(hi_nibble_val+0x6), CONVERT(hi_nibble_val+0x7), \
+									CONVERT(hi_nibble_val+0x8), CONVERT(hi_nibble_val+0x9), CONVERT(hi_nibble_val+0xA), CONVERT(hi_nibble_val+0xB), \
+									CONVERT(hi_nibble_val+0xC), CONVERT(hi_nibble_val+0xD), CONVERT(hi_nibble_val+0xE), CONVERT(hi_nibble_val+0xF)
+
+const uint32_t convertBuffer[0x100] = {	ADD_NIBBLE(0x00), ADD_NIBBLE(0x10), ADD_NIBBLE(0x20), ADD_NIBBLE(0x30),
+										ADD_NIBBLE(0x40), ADD_NIBBLE(0x50), ADD_NIBBLE(0x60), ADD_NIBBLE(0x70),
+										ADD_NIBBLE(0x80), ADD_NIBBLE(0x90), ADD_NIBBLE(0xA0), ADD_NIBBLE(0xB0),
+										ADD_NIBBLE(0xC0), ADD_NIBBLE(0xD0), ADD_NIBBLE(0xE0), ADD_NIBBLE(0xF0) };
+
+*/
+
 // Добавляем цвет диода в буфер DMA 
 void ws2813_AddRGB(uint32_t rgb, int num)
 {		
