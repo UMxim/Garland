@@ -1,3 +1,0 @@
-D:/Project/My/stm32/35_garland/lib/random.c:14:9:Random_AddBit	8	static
-D:/Project/My/stm32/35_garland/lib/random.c:51:10:Random_GetRnd	0	static
-D:/Project/My/stm32/35_garland/lib/random.c:74:9:Random_GetV	0	static

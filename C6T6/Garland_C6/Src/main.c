@@ -58,7 +58,7 @@ TIM_HandleTypeDef htim1;
 volatile uint8_t timFlag = 0;
 volatile uint8_t dmaFlag = 1;
 uint32_t rgbArr[LED_NUM]; // кольцевой массив
-const uint32_t rgbConst[8]={0x000000, 0x0000FF, 0x00FF00, 0x00FFFF, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF};
+const uint32_t rgbConst[8]={0x000000, 0x00007F, 0x007F00, 0x007F7F, 0x7F0000, 0x7F007F, 0x7F7F00, 0x7F7F7F};
 volatile uint32_t timerCounter;
 /* USER CODE END PV */
 
